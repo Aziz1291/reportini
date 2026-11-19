@@ -6,6 +6,7 @@ import '../../core/app_state.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
 import '../../core/validators.dart';
+import '../../data/local/seed.dart' show demoPassword;
 import '../../data/repositories/auth_repository.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -322,7 +323,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               : () => showInfo(
                                   context,
                                   'Mot de passe oublié ?',
-                                  'La réinitialisation du mot de passe sera disponible prochainement.',
+                                  'Pour un compte de démonstration, utilisez le mot de passe $demoPassword.\n\n'
+                                  'Pour retrouver l’accès à un autre compte, contactez votre municipalité ou la personne qui vous a fourni vos identifiants.',
                                 ),
                           child: const Text('Mot de passe oublié ?'),
                         ),

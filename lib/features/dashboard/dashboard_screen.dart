@@ -287,22 +287,27 @@ class _Overview extends StatelessWidget {
     final reports = state.municipalReports;
     final names = <String?, String>{
       for (final report in reports)
-        report.municipalityId: report.municipalityName,
+        if (report.municipalityId != null)
+          report.municipalityId: report.municipalityName,
       for (final item in municipalities) item.id: item.name,
-      null: 'Hors zone',
     };
     final groups = <String?, List<Report>>{};
     for (final report in reports) {
       (groups[report.municipalityId] ??= []).add(report);
     }
     final entries = names.entries.toList()
-      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()))
+      ..add(const MapEntry(null, 'Hors zone'));
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         const DashboardHeading('Vue d’ensemble'),
         const SizedBox(height: 16),
         ReportMetrics(reports: reports),
+        if (reports.isEmpty) ...[
+          const SizedBox(height: 12),
+          const CivicCard(child: Text('Aucun signalement reçu pour le moment.')),
+        ],
         const SizedBox(height: 24),
         Text(
           'Signalements par municipalité',

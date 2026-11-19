@@ -113,9 +113,11 @@ class _MunicipalReportListState extends State<MunicipalReportList> {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 28),
             child: DashboardMessage(
-              reports.isEmpty
-                  ? 'Aucun signalement pour le moment.'
-                  : 'Aucun signalement ne correspond.',
+              switch ((reports.isEmpty, widget.unassignedOnly)) {
+                (true, true) => 'Aucun signalement hors zone pour le moment.',
+                (true, false) => 'Aucun signalement pour le moment.',
+                _ => 'Aucun signalement ne correspond.',
+              },
             ),
           );
         }

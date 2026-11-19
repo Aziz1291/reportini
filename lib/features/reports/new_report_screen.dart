@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -37,6 +38,7 @@ class _NewReportScreenState extends State<NewReportScreen> {
   ReportCategory? _category;
   ReportLocation? _location;
   String? _locationError;
+  bool _permissionPermanentlyDenied = false;
   bool _choosingPhoto = false;
   bool _locating = false;
   bool _sending = false;
@@ -142,12 +144,19 @@ class _NewReportScreenState extends State<NewReportScreen> {
     setState(() {
       _locating = true;
       _locationError = null;
+      _permissionPermanentlyDenied = false;
     });
     try {
       final location = await locateDevice();
       if (mounted) setState(() => _location = location);
     } on RepositoryException catch (error) {
-      if (mounted) setState(() => _locationError = error.message);
+      if (mounted) {
+        setState(() {
+          _locationError = error.message;
+          _permissionPermanentlyDenied =
+              error is LocationPermissionPermanentlyDenied;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -156,6 +165,20 @@ class _NewReportScreenState extends State<NewReportScreen> {
       }
     } finally {
       if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Future<void> _openLocationSettings() async {
+    try {
+      if (await Geolocator.openAppSettings()) return;
+    } catch (_) {
+      // The manual location picker remains available.
+    }
+    if (mounted) {
+      showMessage(
+        context,
+        'Impossible d’ouvrir les réglages. Ouvrez-les depuis votre appareil ou utilisez la carte.',
+      );
     }
   }
 
@@ -170,6 +193,7 @@ class _NewReportScreenState extends State<NewReportScreen> {
     setState(() {
       _locating = true;
       _locationError = null;
+      _permissionPermanentlyDenied = false;
     });
     final location = await resolveLocation(point.latitude, point.longitude);
     if (mounted) {
@@ -211,6 +235,7 @@ class _NewReportScreenState extends State<NewReportScreen> {
       if (mounted) context.go('/confirmation/${report.id}');
     } catch (error) {
       if (!mounted) return;
+      setState(() => _sending = false);
       final detail = error is RepositoryException ? ' ${error.message}' : '';
       messenger.showSnackBar(
         SnackBar(
@@ -218,8 +243,6 @@ class _NewReportScreenState extends State<NewReportScreen> {
           action: SnackBarAction(label: 'Réessayer', onPressed: _send),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -430,9 +453,12 @@ class _NewReportScreenState extends State<NewReportScreen> {
                 if (_locationError case final error?)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      error,
-                      style: const TextStyle(color: civicMuted),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        error,
+                        style: const TextStyle(color: civicMuted),
+                      ),
                     ),
                   ),
                 if (location != null) ...[
@@ -465,6 +491,14 @@ class _NewReportScreenState extends State<NewReportScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
+                if (_permissionPermanentlyDenied && !kIsWeb) ...[
+                  OutlinedButton.icon(
+                    onPressed: _sending ? null : _openLocationSettings,
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('Ouvrir les réglages de l’application'),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 OutlinedButton.icon(
                   onPressed: _locating || _sending ? null : _refreshLocation,
                   icon: const Icon(Icons.gps_fixed, size: 18),

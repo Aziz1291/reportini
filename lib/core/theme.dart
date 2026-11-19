@@ -11,6 +11,8 @@ const civicTint = Color(0xFFEAF1FC);
 ThemeData civicTheme({bool useGoogleFonts = true}) {
   final base = ThemeData(
     useMaterial3: true,
+    visualDensity: VisualDensity.standard,
+    materialTapTargetSize: MaterialTapTargetSize.padded,
     colorScheme: ColorScheme.fromSeed(seedColor: civicBlue).copyWith(
       primary: civicBlue,
       onPrimary: Colors.white,

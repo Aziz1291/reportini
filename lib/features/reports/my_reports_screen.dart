@@ -108,7 +108,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _filter == null
+                          reports.isEmpty
                               ? 'Vous n’avez pas encore de signalement.'
                               : 'Aucun signalement avec ce statut.',
                           textAlign: TextAlign.center,

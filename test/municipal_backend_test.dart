@@ -109,7 +109,12 @@ void main() {
     'scope and status updates are enforced and the citizen sees history',
     () async {
       await backend.signIn('agent.hammamet@reportini.tn', password);
-      expect(await backend.watchMunicipalReports().first, isEmpty);
+      expect(
+        (await backend.watchMunicipalReports().first).map(
+          (report) => report.id,
+        ),
+        ['demo-4', 'demo-5'],
+      );
       await expectLater(
         backend.changeStatus('demo-1', ReportStatus.traite, ''),
         forbidden,
@@ -140,7 +145,8 @@ void main() {
         forbidden,
       );
       final citizen = await backend.signIn('citoyen@reportini.tn', password);
-      final updated = (await backend.watchReports(citizen.id).first).first;
+      final updated = (await backend.watchReports(citizen.id).first)
+          .singleWhere((report) => report.id == 'demo-1');
       expect(updated.history, hasLength(2));
       expect(updated.history.last.by, 'Agent Nabeul');
       expect(updated.history.last.note, 'Réparé');

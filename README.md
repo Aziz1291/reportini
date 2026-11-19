@@ -11,6 +11,14 @@ Reportini permet aux citoyens de signaler des problèmes dans l’espace public 
 
 Le tableau de bord agent affiche les signalements de sa municipalité. L’administration dispose des totaux par municipalité et par statut, ainsi que d’une vue **Hors zone** pour affecter les constats non couverts. Lors du dépôt, Reportini sélectionne le centre le plus proche parmi les zones dont le rayon contient les coordonnées.
 
+## Sprint 3
+
+- Adresses lisibles à partir des données de géocodage. Les Plus Codes sont écartés et les coordonnées s’affichent à cinq décimales si besoin.
+- Les municipalités sont classées par ordre alphabétique dans la vue administrative, avec **Hors zone** en dernier. La mise à jour du mode local ajoute quatre constats de démonstration une seule fois en conservant les données existantes.
+- Les cartes de signalement annoncent le titre, le statut et l’adresse aux lecteurs d’écran. Les listes vides affichent un message adapté et la connexion propose une aide en cas d’oubli du mot de passe.
+- La sélection manuelle sur la carte reste disponible si la permission GPS est bloquée. Sur Android, le formulaire permet aussi d’ouvrir les réglages de l’application. Le bouton d’envoi est désactivé pendant la transmission.
+- Les icônes Android et Web utilisent le logo de Reportini.
+
 ## Architecture
 
 - `lib/core/` contient la navigation par rôle, l’état Provider, le thème Civic Modernist et le calcul de distance.
@@ -30,7 +38,9 @@ flutter run
 flutter run -d chrome
 ```
 
-Au premier lancement en mode local, Nabeul, Hammamet, Tunis et Sousse sont disponibles. Le compte citoyen contient trois constats de démonstration.
+## Captures / démonstration
+
+En mode local, Nabeul, Hammamet, Tunis et Sousse sont disponibles. Le compte citoyen contient sept constats de démonstration, dont un à Kairouan dans **Hors zone**.
 
 | Rôle | E-mail |
 | --- | --- |
@@ -40,6 +50,10 @@ Au premier lancement en mode local, Nabeul, Hammamet, Tunis et Sousse sont dispo
 | Citoyen | `citoyen@reportini.tn` |
 
 Mot de passe commun aux comptes locaux de démonstration **`Reportini2026`**.
+
+1. Connectez-vous avec le compte citoyen. Depuis **Accueil**, créez un signalement avec une photo et choisissez un lieu à Nabeul. Envoyez le constat et relevez sa référence sur l’écran de confirmation.
+2. Déconnectez-vous, puis ouvrez le compte agent de Nabeul sur la même installation. Retrouvez le constat par sa référence, passez-le à **En cours**, puis à **Traité**, avec une note d’intervention.
+3. Reconnectez-vous avec le compte citoyen. Dans **Mes signalements**, ouvrez le constat pour voir le statut **Traité** et l’historique de l’intervention.
 
 ## Activer Firebase
 
@@ -72,4 +86,4 @@ flutter build apk --debug
 flutter build web
 ```
 
-Les tests couvrent les validations, le routage géographique, les autorisations, les comptes agents, l’historique, l’affectation manuelle et l’affichage filtré du tableau de bord. Les tests Flutter utilisent le mode local et des préférences simulées.
+Les tests couvrent les validations, le routage géographique, les autorisations, les comptes agents, l’historique, l’affectation manuelle et l’affichage filtré du tableau de bord. Ils couvrent aussi le formatage des adresses, la migration des données de démonstration et la connexion du citoyen jusqu’à l’accueil. Les tests Flutter utilisent le mode local et des préférences simulées.

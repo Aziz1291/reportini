@@ -136,8 +136,10 @@ class ReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return CivicCard(
-      onTap: () => _open(context),
+    void open() => _open(context);
+
+    final card = CivicCard(
+      onTap: open,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -219,21 +221,25 @@ class ReportCard extends StatelessWidget {
             ],
           ),
           if (recent)
-            Row(
-              children: [
-                Expanded(
-                  child: MetadataLine(
-                    Icons.schedule,
-                    reportDate(report.createdAt),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: MetadataLine(
+                      Icons.schedule,
+                      reportDate(report.createdAt),
+                    ),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: () => _open(context),
-                  icon: const Icon(Icons.arrow_forward, size: 15),
-                  iconAlignment: IconAlignment.end,
-                  label: const Text('Détails'),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    'Détails',
+                    style: text.labelLarge?.copyWith(color: civicBlue),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward, size: 15, color: civicBlue),
+                ],
+              ),
             )
           else ...[
             const SizedBox(height: 12),
@@ -267,6 +273,16 @@ class ReportCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    return Semantics(
+      container: true,
+      button: true,
+      label:
+          '${report.title}, ${report.status.label}, ${report.location.address}',
+      onTap: open,
+      excludeSemantics: true,
+      child: card,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -28,6 +29,60 @@ void main() {
     await backend.close();
     await directory.delete(recursive: true);
   });
+
+  for (final legacyVersion in [null, 1]) {
+    test(
+      'adds Sprint 3 demo reports once for seed version $legacyVersion',
+      () async {
+        const key = 'reportini.local.v1';
+        final citizen = await backend.signIn(
+          'citoyen@reportini.tn',
+          'Reportini2026',
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final legacy =
+            jsonDecode(prefs.getString(key)!) as Map<String, dynamic>;
+        if (legacyVersion == null) {
+          legacy.remove('seedVersion');
+        } else {
+          legacy['seedVersion'] = legacyVersion;
+        }
+        final reports = legacy['reports'] as Map<String, dynamic>;
+        reports.removeWhere(
+          (id, _) => !['demo-1', 'demo-2', 'demo-3'].contains(id),
+        );
+        final first = reports['demo-1'] as Map<String, dynamic>;
+        first['title'] = 'Titre modifié avant la mise à jour';
+        reports['citizen-created'] = {
+          ...first,
+          'title': 'Signalement personnel',
+          'reference': 'RPT-2026-12345',
+        };
+        await prefs.setString(key, jsonEncode(legacy));
+
+        final migrated = await open();
+        addTearDown(migrated.close);
+        expect((await migrated.restoreSession())?.id, citizen.id);
+        final items = await migrated.listReports(citizen.id);
+        final byId = {for (final report in items) report.id: report};
+        expect(byId, hasLength(8));
+        expect(byId['demo-1']?.title, 'Titre modifié avant la mise à jour');
+        expect(byId['citizen-created']?.title, 'Signalement personnel');
+        expect(byId['demo-4']?.municipalityId, 'hammamet');
+        expect(byId['demo-5']?.municipalityId, 'hammamet');
+        expect(byId['demo-6']?.municipalityId, 'tunis');
+        expect(byId['demo-7']?.municipalityName, 'Hors zone');
+        expect(byId['demo-7']?.municipalityId, isNull);
+
+        final migratedSnapshot = prefs.getString(key);
+        expect((jsonDecode(migratedSnapshot!) as Map)['seedVersion'], 2);
+        final restarted = await open();
+        addTearDown(restarted.close);
+        expect(await restarted.listReports(citizen.id), hasLength(8));
+        expect(prefs.getString(key), migratedSnapshot);
+      },
+    );
+  }
 
   test(
     'registers a citizen, rejects wrong credentials and restores the session',
@@ -88,7 +143,7 @@ void main() {
 
       final updates = expectLater(
         backend.watchReports(citizen.id),
-        emitsInOrder([hasLength(3), hasLength(4)]),
+        emitsInOrder([hasLength(7), hasLength(8)]),
       );
       const id = 'aa332211-1020-4030-8040-a1b2c3d4e5f6';
       final draft = ReportDraft(
@@ -119,7 +174,7 @@ void main() {
         (await backend.createReport(citizen.id, draft)).reference,
         report.reference,
       );
-      expect(await backend.listReports(citizen.id), hasLength(4));
+      expect(await backend.listReports(citizen.id), hasLength(8));
 
       final restarted = await open();
       addTearDown(restarted.close);
@@ -161,12 +216,12 @@ void main() {
         backend.createReport(citizen.id, draft),
         throwsA(isA<RepositoryException>()),
       );
-      expect(await backend.listReports(citizen.id), hasLength(3));
+      expect(await backend.listReports(citizen.id), hasLength(7));
       await photo.writeAsBytes([1, 2, 3]);
       final report = await backend.createReport(citizen.id, draft);
       expect(report.municipalityId, isNull);
       expect(report.municipalityName, 'Hors zone');
-      expect(await backend.listReports(citizen.id), hasLength(4));
+      expect(await backend.listReports(citizen.id), hasLength(8));
     },
   );
 }

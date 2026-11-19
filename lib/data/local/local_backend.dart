@@ -49,26 +49,36 @@ class LocalBackend
   }) async {
     final prefs = preferences ?? await SharedPreferences.getInstance();
     final stored = prefs.getString(_key);
-    if (stored != null) {
-      return LocalBackend._(prefs, _decode(stored), latency, photoDirectory);
-    }
     final now = DateTime.now();
-    final data = <String, dynamic>{
-      'session': null,
-      'municipalities': {
-        for (final municipality in demoMunicipalities)
-          municipality.id: municipality.toJson(),
-      },
-      'accounts': {
-        for (final account in demoAccounts(now))
-          account.id: {...account.toJson(), ..._credential(demoPassword)},
-      },
-      'reports': {
-        for (final report in demoReports(now)) report.id: report.toJson(),
-      },
-    };
+    final data = stored != null
+        ? _decode(stored)
+        : <String, dynamic>{
+            'session': null,
+            'municipalities': {
+              for (final municipality in demoMunicipalities)
+                municipality.id: municipality.toJson(),
+            },
+            'accounts': {
+              for (final account in demoAccounts(now))
+                account.id: {...account.toJson(), ..._credential(demoPassword)},
+            },
+            'reports': <String, dynamic>{},
+          };
     final backend = LocalBackend._(prefs, data, latency, photoDirectory);
-    await backend._save(data);
+    // Unversioned snapshots already contain the original demo reports.
+    final version = data['seedVersion'] as int? ?? (stored == null ? 0 : 1);
+    if (version < seedVersion) {
+      final reports = backend._table(data, 'reports');
+      for (final report in demoReports(
+        now,
+        afterVersion: version,
+        municipalities: backend._municipalities(data),
+      )) {
+        reports.putIfAbsent(report.id, report.toJson);
+      }
+      data['seedVersion'] = seedVersion;
+      await backend._save(data);
+    }
     return backend;
   }
 

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../data/models/account.dart';
 import '../data/models/report.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/dashboard/dashboard_screen.dart';
+import '../features/dashboard/municipal_report_detail.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/reports/confirmation_screen.dart';
@@ -21,11 +23,12 @@ GoRouter createRouter(AppState appState) => GoRouter(
     final path = state.uri.path;
     final isAuth = path == '/connexion' || path == '/inscription';
     final role = appState.account?.role;
+    final isDashboard = path == '/dashboard' || path.startsWith('/dashboard/');
     if (role == null) return isAuth ? null : '/connexion';
     if (role != AccountRole.citizen) {
-      return path == '/dashboard' ? null : '/dashboard';
+      return isDashboard ? null : '/dashboard';
     }
-    return isAuth || path == '/dashboard' || path == '/' ? '/accueil' : null;
+    return isAuth || isDashboard || path == '/' ? '/accueil' : null;
   },
   routes: [
     GoRoute(path: '/', redirect: (_, _) => '/accueil'),
@@ -34,7 +37,17 @@ GoRouter createRouter(AppState appState) => GoRouter(
       path: '/inscription',
       builder: (_, _) => const AuthScreen(registration: true),
     ),
-    GoRoute(path: '/dashboard', builder: (_, _) => const _Dashboard()),
+    GoRoute(
+      path: '/dashboard',
+      builder: (_, _) => const DashboardScreen(),
+      routes: [
+        GoRoute(
+          path: 'signalements/:id',
+          builder: (_, state) =>
+              MunicipalReportDetail(id: state.pathParameters['id']!),
+        ),
+      ],
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => _CitizenShell(shell: shell),
       branches: [
@@ -131,31 +144,6 @@ class _CitizenShell extends StatelessWidget {
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person, color: civicBlue),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Dashboard extends StatelessWidget {
-  const _Dashboard();
-
-  @override
-  Widget build(BuildContext context) {
-    final account = context.watch<AppState>().account;
-    return Scaffold(
-      appBar: AppBar(title: const BrandTitle('Espace municipal')),
-      body: SafeArea(
-        child: PageList(
-          children: [
-            Text(
-              'Tableau de bord — Sprint 2',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (account != null) Text(account.email),
-            const SizedBox(height: 16),
-            const LogoutButton(),
           ],
         ),
       ),

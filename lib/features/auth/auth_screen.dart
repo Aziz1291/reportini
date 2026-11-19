@@ -141,12 +141,17 @@ class _AuthScreenState extends State<AuthScreen> {
                           size: 19,
                         ),
                         const SizedBox(width: 8),
-                        Text('Espace Citoyen', style: text.titleMedium),
+                        Flexible(
+                          child: Text(
+                            'Espace citoyen et municipal',
+                            style: text.titleMedium,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Bienvenue sur votre espace citoyen. Participez activement à l’amélioration de votre cadre de vie.',
+                      'Connectez-vous pour accéder à vos signalements ou au tableau de bord de votre municipalité.',
                       style: TextStyle(color: civicMuted),
                     ),
                   ],

@@ -13,7 +13,7 @@ void main() {
     );
 
     expect(find.text('REPORTINI'), findsOneWidget);
-    expect(find.text('Espace Citoyen'), findsOneWidget);
+    expect(find.text('Espace citoyen et municipal'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const Key('auth-email')),

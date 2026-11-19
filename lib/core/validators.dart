@@ -22,3 +22,13 @@ String? validateConfirmation(String? value, String password) =>
     value == password && password.isNotEmpty
     ? null
     : 'Les mots de passe ne correspondent pas.';
+
+String? validateCoordinate(double? value, int limit) =>
+    value == null || !value.isFinite || value.abs() > limit
+    ? 'Saisissez une valeur entre −$limit et $limit.'
+    : null;
+
+String? validateRadius(double? value) =>
+    value == null || !value.isFinite || value <= 0
+    ? 'Saisissez un rayon strictement positif.'
+    : null;

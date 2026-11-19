@@ -8,7 +8,6 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/municipality_repository.dart';
 import '../data/repositories/report_repository.dart';
 import '../data/repositories/user_repository.dart';
-import 'municipality_locator.dart';
 
 class AppState extends ChangeNotifier {
   AppState({
@@ -26,7 +25,10 @@ class AppState extends ChangeNotifier {
   List<Report> myReports = const [];
   bool reportsLoading = false;
   bool reportsUnavailable = false;
+  List<Report> municipalReports = const [];
   StreamSubscription<List<Report>>? _watch;
+  StreamSubscription<Account?>? _profileWatch;
+  int _reportScope = 0;
   bool _disposed = false;
 
   Future<void> restore() async => _setAccount(await auth.restoreSession());
@@ -50,28 +52,78 @@ class AppState extends ChangeNotifier {
 
   void _setAccount(Account? value) {
     if (_disposed) return;
-    unawaited(_watch?.cancel());
+    unawaited(_profileWatch?.cancel());
     account = value;
-    myReports = const [];
-    reportsLoading = value?.role == AccountRole.citizen;
-    reportsUnavailable = false;
-    if (value != null && reportsLoading) {
-      _watch = reports
-          .watchReports(value.id)
+    _startReportWatch();
+    if (value != null) {
+      _profileWatch = users
+          .watchOwnAccount(value.id)
           .listen(
-            (items) {
-              if (account?.id != value.id || _disposed) return;
-              _setReports(items);
+            (profile) {
+              if (_disposed || account?.id != value.id) return;
+              if (profile?.enabled != true) {
+                _setAccount(null);
+                return;
+              }
+              final current = account!;
+              final updated = profile!;
+              account = updated;
+              if (current.role != updated.role ||
+                  current.municipalityId != updated.municipalityId) {
+                _startReportWatch();
+              } else if (current.name != updated.name ||
+                  current.email != updated.email) {
+                notifyListeners();
+              }
             },
             onError: (Object _) {
-              if (account?.id != value.id || _disposed) return;
-              reportsLoading = false;
-              reportsUnavailable = true;
-              notifyListeners();
+              // Repository and server rules continue to enforce the stored role.
             },
           );
     }
+  }
+
+  void _startReportWatch() {
+    unawaited(_watch?.cancel());
+    final scope = ++_reportScope;
+    final current = account;
+    myReports = const [];
+    municipalReports = const [];
+    reportsLoading = current != null;
+    reportsUnavailable = false;
+    if (current != null) {
+      final citizen = current.role == AccountRole.citizen;
+      final stream = citizen
+          ? reports.watchReports(current.id)
+          : reports.watchMunicipalReports();
+      _watch = stream.listen(
+        (items) {
+          if (_disposed || scope != _reportScope) return;
+          if (citizen) {
+            _setReports(items);
+          } else {
+            municipalReports = List.unmodifiable(items);
+            reportsLoading = false;
+            reportsUnavailable = false;
+            notifyListeners();
+          }
+        },
+        onError: (Object _) {
+          if (_disposed || scope != _reportScope) return;
+          if (!citizen) municipalReports = const [];
+          reportsLoading = false;
+          reportsUnavailable = true;
+          notifyListeners();
+        },
+      );
+    }
     notifyListeners();
+  }
+
+  void retryMunicipalReports() {
+    if (account != null && account!.role != AccountRole.citizen) {
+      _startReportWatch();
+    }
   }
 
   void _setReports(List<Report> items) {
@@ -97,25 +149,7 @@ class AppState extends ChangeNotifier {
 
   Future<Report> submit(ReportDraft draft) async {
     final id = account!.id;
-    final available = await municipalities.listMunicipalities();
-    final point = draft.location;
-    final assigned = const MunicipalityLocator().locate(
-      point.lat,
-      point.lng,
-      available,
-    );
-    final report = await reports.createReport(
-      id,
-      ReportDraft(
-        id: draft.id,
-        category: draft.category,
-        title: draft.title,
-        description: draft.description,
-        location: point,
-        photo: draft.photo,
-        municipality: assigned,
-      ),
-    );
+    final report = await reports.createReport(id, draft);
     if (!_disposed && account?.id == id) {
       _setReports(
         [report, ...myReports.where((item) => item.id != report.id)]
@@ -129,6 +163,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     unawaited(_watch?.cancel());
+    unawaited(_profileWatch?.cancel());
     super.dispose();
   }
 }

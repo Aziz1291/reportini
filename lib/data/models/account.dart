@@ -8,6 +8,7 @@ class Account {
     required this.role,
     required this.createdAt,
     this.municipalityId,
+    this.enabled = true,
   });
 
   factory Account.fromJson(String id, Map<String, dynamic> json) => Account(
@@ -17,6 +18,7 @@ class Account {
     role: AccountRole.values.byName(json['role'] as String),
     createdAt: DateTime.parse(json['createdAt'] as String),
     municipalityId: json['municipalityId'] as String?,
+    enabled: json['enabled'] as bool? ?? true,
   );
 
   final String id;
@@ -25,6 +27,7 @@ class Account {
   final AccountRole role;
   final DateTime createdAt;
   final String? municipalityId;
+  final bool enabled;
 
   String get firstName => name.trim().split(RegExp(r'\s+')).first;
 
@@ -33,6 +36,7 @@ class Account {
     'email': email,
     'role': role.name,
     'municipalityId': municipalityId,
+    'enabled': enabled,
     'createdAt': createdAt.toUtc().toIso8601String(),
   };
 }

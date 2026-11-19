@@ -10,8 +10,17 @@ import 'report_photo.dart';
 import 'report_widgets.dart';
 
 class ReportDetailScreen extends StatelessWidget {
-  const ReportDetailScreen({super.key, required this.report});
+  const ReportDetailScreen({
+    super.key,
+    required this.report,
+    this.showCitizen = false,
+    this.backPath = '/signalements',
+    this.actions,
+  });
   final Report report;
+  final bool showCitizen;
+  final String backPath;
+  final Widget? actions;
 
   void _zoom(BuildContext context) => Navigator.of(context).push<void>(
     MaterialPageRoute(
@@ -40,7 +49,7 @@ class ReportDetailScreen extends StatelessWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/signalements');
+              context.go(backPath);
             }
           },
         ),
@@ -145,6 +154,13 @@ class ReportDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(report.title, style: text.headlineSmall),
+                        if (showCitizen) ...[
+                          const SizedBox(height: 7),
+                          MetadataLine(
+                            Icons.person_outline,
+                            report.citizenName ?? 'Nom du citoyen indisponible',
+                          ),
+                        ],
                         if (report.description.isNotEmpty) ...[
                           const SizedBox(height: 7),
                           Text(
@@ -205,6 +221,10 @@ class ReportDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (actions case final controls?) ...[
+              const SizedBox(height: 12),
+              CivicCard(child: controls),
+            ],
             const SizedBox(height: 12),
             CivicCard(
               child: Column(
@@ -218,6 +238,9 @@ class ReportDetailScreen extends StatelessWidget {
                     _TimelineEvent(
                       history[index],
                       latest: index == history.length - 1,
+                      author: history[index].by == report.citizenId
+                          ? report.citizenName
+                          : history[index].by,
                     ),
                 ],
               ),
@@ -230,9 +253,10 @@ class ReportDetailScreen extends StatelessWidget {
 }
 
 class _TimelineEvent extends StatelessWidget {
-  const _TimelineEvent(this.event, {required this.latest});
+  const _TimelineEvent(this.event, {required this.latest, this.author});
   final ReportEvent event;
   final bool latest;
+  final String? author;
 
   @override
   Widget build(BuildContext context) {
@@ -266,11 +290,12 @@ class _TimelineEvent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(event.status.stage, style: text.titleMedium),
+                Text(event.status.label, style: text.titleMedium),
                 Text(
                   reportDate(event.at),
                   style: text.bodySmall?.copyWith(color: civicMuted),
                 ),
+                if (author case final name?) Text(name, style: text.bodySmall),
                 if (event.note.isNotEmpty) Text(event.note),
               ],
             ),

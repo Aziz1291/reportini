@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function profile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return request.auth != null &&
+        profile().get('enabled', true) == true &&
+        profile().role == role;
+    }
+
+    function ownsPhoto(citizenId) {
+      return hasRole('citizen') && request.auth.uid == citizenId;
+    }
+
+    function assignedPhoto(citizenId, reportId) {
+      let report = firestore.get(/databases/(default)/documents/reports/$(reportId)).data;
+      return report.citizenId == citizenId &&
+        profile().get('municipalityId', null) is string &&
+        report.get('municipalityId', null) == profile().municipalityId;
+    }
+
+    match /reports/{citizenId}/{reportId} {
+      allow get: if hasRole('admin') || ownsPhoto(citizenId) ||
+        (hasRole('agent') && assignedPhoto(citizenId, reportId));
+      allow list, delete: if hasRole('admin');
+      allow create, update: if hasRole('admin') ||
+        (ownsPhoto(citizenId) &&
+          !firestore.exists(/databases/(default)/documents/reports/$(reportId)) &&
+          request.resource.size > 0 &&
+          request.resource.size <= 10 * 1024 * 1024 &&
+          request.resource.contentType.matches('image/.*'));
+    }
+  }
+}

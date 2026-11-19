@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function activeAccount() {
+      return signedIn() && profile().get('enabled', true) == true;
+    }
+
+    function hasRole(role) {
+      return activeAccount() && profile().role == role;
+    }
+
+    function admin() {
+      return hasRole('admin');
+    }
+
+    function municipality(id) {
+      return get(/databases/$(database)/documents/municipalities/$(id)).data;
+    }
+
+    function activeMunicipality(id) {
+      return id is string && municipality(id).get('archived', false) == false;
+    }
+
+    function validAgentAssignment(user) {
+      return user.get('role', '') != 'agent' ||
+        activeMunicipality(user.get('municipalityId', null));
+    }
+
+    match /users/{uid} {
+      allow get: if ownUser(uid) || admin();
+      allow list, delete: if admin();
+      allow create: if (admin() && validAgentAssignment(request.resource.data)) ||
+        (ownUser(uid) &&
+          request.resource.data.keys().hasOnly(
+            ['name', 'email', 'role', 'municipalityId', 'createdAt', 'enabled']
+          ) &&
+          request.resource.data.role == 'citizen' &&
+          request.resource.data.get('municipalityId', null) == null &&
+          request.resource.data.get('enabled', true) == true &&
+          request.resource.data.email == request.auth.token.email &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0);
+      allow update: if
+        (admin() &&
+          (!request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['role', 'municipalityId']) ||
+            validAgentAssignment(request.resource.data))) ||
+        (ownUser(uid) && activeAccount() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0);
+    }
+
+    match /municipalities/{id} {
+      allow read: if activeAccount();
+      allow write: if admin();
+    }
+
+    match /municipalityNames/{key} {
+      allow read, write: if admin();
+    }
+
+    function ownsReport(report) {
+      return hasRole('citizen') && report.citizenId == request.auth.uid;
+    }
+
+    function assignedAgent(report) {
+      return hasRole('agent') &&
+        profile().get('municipalityId', null) is string &&
+        report.municipalityId == profile().municipalityId;
+    }
+
+    function validCitizenAssignment(report) {
+      let id = report.get('municipalityId', null);
+      return id == null
+        ? report.municipalityName == 'Hors zone'
+        : activeMunicipality(id) && report.municipalityName == municipality(id).name;
+    }
+
+    function validInitialHistory(report) {
+      let first = report.history[0];
+      return report.history.size() == 1 &&
+        first.keys().hasOnly(['status', 'at', 'by', 'note']) &&
+        first.status == 'en_attente' &&
+        first.at == report.createdAt &&
+        report.updatedAt == report.createdAt &&
+        first.by == request.auth.uid &&
+        first.note is string;
+    }
+
+    function validStatusChange(before, after) {
+      let event = after.history[after.history.size() - 1];
+      return after.diff(before).affectedKeys().hasOnly(['status', 'history', 'updatedAt']) &&
+        after.status in ['en_attente', 'en_cours', 'traite'] &&
+        after.status != before.status &&
+        after.history == before.history.concat([event]) &&
+        event.keys().hasOnly(['status', 'at', 'by', 'note']) &&
+        event.status == after.status &&
+        event.at is timestamp &&
+        event.at == after.updatedAt &&
+        (!(before.updatedAt is timestamp) || after.updatedAt > before.updatedAt) &&
+        event.by == profile().name &&
+        event.note is string;
+    }
+
+    match /reports/{id} {
+      allow list: if admin() || ownsReport(resource.data) || assignedAgent(resource.data);
+      // A citizen can check a new draft ID for idempotent creation.
+      allow get: if admin() || (resource == null && hasRole('citizen')) ||
+        ownsReport(resource.data) || assignedAgent(resource.data);
+      allow create: if
+        (admin() &&
+          (request.resource.data.get('municipalityId', null) == null ||
+            activeMunicipality(request.resource.data.municipalityId))) ||
+        (ownsReport(request.resource.data) &&
+          request.resource.data.status == 'en_attente' &&
+          request.resource.data.citizenName == profile().name &&
+          validCitizenAssignment(request.resource.data) &&
+          validInitialHistory(request.resource.data));
+      allow update: if
+        (admin() &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['municipalityId']) ||
+            request.resource.data.get('municipalityId', null) == null ||
+            activeMunicipality(request.resource.data.municipalityId))) ||
+        (assignedAgent(resource.data) && validStatusChange(resource.data, request.resource.data));
+      allow delete: if admin();
+    }
+  }
+}

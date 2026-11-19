@@ -69,14 +69,14 @@ List<Report> demoReports(DateTime now) {
         ReportEvent(
           ReportStatus.enCours,
           created.add(const Duration(hours: 4)),
-          'agent-nabeul',
+          'Agent Nabeul',
           progress,
         ),
       if (resolution != null)
         ReportEvent(
           ReportStatus.traite,
           created.add(const Duration(days: 2)),
-          'agent-nabeul',
+          'Agent Nabeul',
           resolution,
         ),
     ];
@@ -84,6 +84,7 @@ List<Report> demoReports(DateTime now) {
       id: 'demo-$number',
       reference: 'RPT-${created.year}-0000$number',
       citizenId: 'citoyen',
+      citizenName: 'Claire Dubois',
       category: category,
       title: title,
       description: description,

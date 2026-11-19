@@ -111,12 +111,27 @@ class ReportSection extends StatelessWidget {
 }
 
 class ReportCard extends StatelessWidget {
-  const ReportCard(this.report, {super.key, this.recent = false});
+  const ReportCard(
+    this.report, {
+    super.key,
+    this.recent = false,
+    this.onOpen,
+    this.municipal = false,
+    this.municipalityLabel,
+  });
   final Report report;
   final bool recent;
+  final VoidCallback? onOpen;
+  final bool municipal;
+  final String? municipalityLabel;
 
-  void _open(BuildContext context) =>
+  void _open(BuildContext context) {
+    if (onOpen case final open?) {
+      open();
+    } else {
       context.push('/signalements/${report.id}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,6 +198,14 @@ class ReportCard extends StatelessWidget {
                       Icons.location_on_outlined,
                       report.location.address,
                     ),
+                    if (municipal) ...[
+                      const SizedBox(height: 4),
+                      MetadataLine(Icons.tag, report.reference),
+                      if (report.municipalityId == null)
+                        const MetadataLine(Icons.apartment, 'Hors zone')
+                      else if (municipalityLabel case final label?)
+                        MetadataLine(Icons.apartment, label),
+                    ],
                     if (!recent) ...[
                       const SizedBox(height: 4),
                       MetadataLine(
@@ -226,7 +249,8 @@ class ReportCard extends StatelessWidget {
                     Expanded(
                       child: MetadataLine(
                         Icons.update,
-                        report.history.isEmpty
+                        report.history.isEmpty ||
+                                report.history.last.note.isEmpty
                             ? report.status.stage
                             : report.history.last.note,
                       ),

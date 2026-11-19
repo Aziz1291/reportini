@@ -66,7 +66,7 @@ class ReportDraft {
     required this.description,
     required this.location,
     required this.photo,
-    required this.municipality,
+    this.municipality,
   });
 
   final String id;
@@ -76,6 +76,16 @@ class ReportDraft {
   final ReportLocation location;
   final XFile photo;
   final Municipality? municipality;
+
+  ReportDraft withMunicipality(Municipality? assigned) => ReportDraft(
+    id: id,
+    category: category,
+    title: title,
+    description: description,
+    location: location,
+    photo: photo,
+    municipality: assigned,
+  );
 }
 
 class Report {
@@ -94,9 +104,15 @@ class Report {
     required this.history,
     required this.createdAt,
     required this.updatedAt,
+    this.citizenName,
   });
 
-  factory Report.submitted(ReportDraft draft, String citizenId, String photo) {
+  factory Report.submitted(
+    ReportDraft draft,
+    String citizenId,
+    String photo, {
+    String? citizenName,
+  }) {
     final now = DateTime.now();
     final referenceSeed = int.parse(draft.id.substring(0, 8), radix: 16);
     final suffix = (referenceSeed % 60466176)
@@ -107,6 +123,7 @@ class Report {
       id: draft.id,
       reference: 'RPT-${now.year}-$suffix',
       citizenId: citizenId,
+      citizenName: citizenName,
       category: draft.category,
       title: draft.title,
       description: draft.description,
@@ -132,6 +149,7 @@ class Report {
     id: id,
     reference: json['reference'] as String,
     citizenId: json['citizenId'] as String,
+    citizenName: json['citizenName'] as String?,
     category: ReportCategory.values.byName(json['category'] as String),
     title: json['title'] as String,
     description: json['description'] as String,
@@ -158,6 +176,7 @@ class Report {
   final String id;
   final String reference;
   final String citizenId;
+  final String? citizenName;
   final ReportCategory category;
   final String title;
   final String description;
@@ -173,6 +192,7 @@ class Report {
   Map<String, dynamic> toJson() => {
     'reference': reference,
     'citizenId': citizenId,
+    'citizenName': citizenName,
     'category': category.name,
     'title': title,
     'description': description,

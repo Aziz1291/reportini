@@ -17,18 +17,25 @@ class ReportMap extends StatelessWidget {
     required this.center,
     required this.point,
     this.onSelect,
+    this.controller,
+    this.zoom,
+    this.radiusKm,
   });
   final LatLng center;
   final LatLng? point;
   final ValueChanged<LatLng>? onSelect;
+  final MapController? controller;
+  final double? zoom;
+  final double? radiusKm;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(14),
     child: FlutterMap(
+      mapController: controller,
       options: MapOptions(
         initialCenter: center,
-        initialZoom: point == null ? 13 : 16,
+        initialZoom: zoom ?? (point == null ? 13 : 16),
         maxZoom: 19,
         interactionOptions: InteractionOptions(
           flags: onSelect == null
@@ -43,6 +50,19 @@ class ReportMap extends StatelessWidget {
           userAgentPackageName: applicationId,
           maxNativeZoom: 19,
         ),
+        if (radiusKm case final radius? when point != null)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: point!,
+                radius: radius.clamp(0.0, 20015.0).toDouble() * 1000,
+                useRadiusInMeter: true,
+                color: civicBlue.withValues(alpha: .16),
+                borderColor: civicBlue,
+                borderStrokeWidth: 2,
+              ),
+            ],
+          ),
         if (point case final selected?)
           MarkerLayer(
             markers: [

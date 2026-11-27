@@ -66,6 +66,16 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Fills the login fields with a demo account (does not submit).
+  void _fillDemo(String email) {
+    setState(() {
+      _email.text = email;
+      _password.text = demoPassword;
+      _error = null;
+    });
+    _form.currentState?.validate();
+  }
+
   Widget _label(BuildContext context, String value, [String? hint]) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: Row(
@@ -356,6 +366,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
             ),
+            if (!registration) ...[
+              const SizedBox(height: 14),
+              _DemoAccounts(enabled: !_busy, onPick: _fillDemo),
+            ],
             const SizedBox(height: 12),
             Center(
               child: Wrap(
@@ -434,4 +448,52 @@ class _PasswordRule extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Demo accounts shown on the login screen to make testing easier.
+const demoLogins = [
+  (Icons.person_outline, 'Citoyen', 'citoyen@reportini.tn'),
+  (Icons.engineering_outlined, 'Agent Nabeul', 'agent.nabeul@reportini.tn'),
+  (Icons.engineering_outlined, 'Agent Hammamet', 'agent.hammamet@reportini.tn'),
+  (Icons.admin_panel_settings_outlined, 'Administrateur', 'admin@reportini.tn'),
+];
+
+class _DemoAccounts extends StatelessWidget {
+  const _DemoAccounts({required this.enabled, required this.onPick});
+  final bool enabled;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) => CivicCard(
+    color: const Color(0xFFF0F2F5),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Comptes de démonstration',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Touchez un rôle pour remplir les identifiants.',
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: civicMuted),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (icon, label, email) in demoLogins)
+              ActionChip(
+                key: Key('demo-$email'),
+                avatar: Icon(icon, size: 18, color: civicBlue),
+                label: Text(label),
+                onPressed: enabled ? () => onPick(email) : null,
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
 }

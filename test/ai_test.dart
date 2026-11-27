@@ -30,6 +30,15 @@ const _validJson = {
   'reason': 'Chaussée dégradée visible',
 };
 
+// Independent of the key currently written in lib/core/ai/ai_keys.dart.
+const _placeholderSettings = AiSettings(
+  enabled: true,
+  provider: AiProvider.gemini,
+  apiKey: kAiApiKeyPlaceholder,
+  model: '',
+  baseUrl: '',
+);
+
 void main() {
   group('ImageAnalysis.fromJson', () {
     test('parses a well-formed answer', () {
@@ -203,8 +212,7 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     test('the placeholder key keeps the AI disabled', () {
-      final settings = AiSettings.buildTime();
-      expect(settings.apiKey, kAiApiKeyPlaceholder);
+      final settings = _placeholderSettings;
       expect(settings.hasKey, isFalse);
       expect(createAnalyzer(settings), isA<DisabledImageAnalyzer>());
     });
@@ -283,7 +291,10 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
-    final service = AiService(store: AiSettingsStore());
+    final service = AiService(
+      initial: _placeholderSettings,
+      store: AiSettingsStore(),
+    );
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: service,

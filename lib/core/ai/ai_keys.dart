@@ -23,7 +23,7 @@ const kAiApiKeyPlaceholder = 'COLLEZ_VOTRE_CLE_API_ICI';
 /// Clé API utilisée par défaut (remplaçable par --dart-define AI_API_KEY).
 const kAiApiKey = String.fromEnvironment(
   'AI_API_KEY',
-  defaultValue: kAiApiKeyPlaceholder,
+  defaultValue: 'AQ.Ab8RN6KOvpL2Z_77CHTicNTTt019F4IGMsd1ONFpsEFXuEvarg',
 );
 
 /// Fournisseur par défaut : gemini, grok ou openai.

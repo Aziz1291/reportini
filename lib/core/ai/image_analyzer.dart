@@ -86,7 +86,7 @@ const _examples = {
   ReportCategory.other: ' (tout autre problème urbain)',
 };
 
-const _timeout = Duration(seconds: 20);
+const _timeout = Duration(seconds: 30);
 
 abstract class _HttpImageAnalyzer implements ImageAnalyzer {
   _HttpImageAnalyzer({
@@ -159,7 +159,7 @@ class GeminiImageAnalyzer extends _HttpImageAnalyzer {
   GeminiImageAnalyzer({required super.apiKey, String? model, super.client})
     : super(model: (model == null || model.isEmpty) ? defaultModel : model);
 
-  static const defaultModel = 'gemini-flash-latest';
+  static const defaultModel = 'gemini-flash-lite-latest';
 
   @override
   Future<ImageAnalysis> analyze(

@@ -40,6 +40,33 @@ void main() {
     );
   });
 
+  testWidgets('demo account buttons fill the login fields', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: civicTheme(useGoogleFonts: false),
+        home: const AuthScreen(),
+      ),
+    );
+    final chip = find.byKey(const Key('demo-admin@reportini.tn'));
+    await tester.scrollUntilVisible(
+      chip,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(chip);
+    await tester.pump();
+
+    final email = tester.widget<TextFormField>(
+      find.byKey(const Key('auth-email')),
+    );
+    final password = tester.widget<TextFormField>(
+      find.byKey(const Key('auth-password')),
+    );
+    expect(email.controller!.text, 'admin@reportini.tn');
+    expect(password.controller!.text, 'Reportini2026');
+    expect(find.text('Agent Hammamet'), findsOneWidget);
+  });
+
   testWidgets('seed citizen signs in and sees the Accueil greeting', (
     tester,
   ) async {

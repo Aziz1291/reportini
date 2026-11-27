@@ -39,7 +39,7 @@ Créez une clé gratuite sur <https://aistudio.google.com/apikey>, puis au choix
    flutter build apk --release --dart-define-from-file=ai.env.json
    ```
 
-Une clé enregistrée dans l’application est prioritaire sur celle du code. Le modèle par défaut est `gemini-flash-latest` (modifiable dans l’écran).
+Une clé enregistrée dans l’application est prioritaire sur celle du code. Le modèle par défaut est `gemini-flash-lite-latest` (modifiable dans l’écran).
 
 > **Sécurité :** une clé intégrée à une application mobile peut être extraite. C’est acceptable pour la démonstration ; en production, l’appel à l’IA doit passer par un serveur (par exemple une Cloud Function Firebase) qui garde la clé.
 

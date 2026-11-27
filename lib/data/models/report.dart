@@ -67,6 +67,8 @@ class ReportDraft {
     required this.location,
     required this.photo,
     this.municipality,
+    this.aiCategory,
+    this.aiConfidence,
   });
 
   final String id;
@@ -77,6 +79,10 @@ class ReportDraft {
   final XFile photo;
   final Municipality? municipality;
 
+  /// Category suggested by the AI assistant, if it was used.
+  final ReportCategory? aiCategory;
+  final double? aiConfidence;
+
   ReportDraft withMunicipality(Municipality? assigned) => ReportDraft(
     id: id,
     category: category,
@@ -85,6 +91,8 @@ class ReportDraft {
     location: location,
     photo: photo,
     municipality: assigned,
+    aiCategory: aiCategory,
+    aiConfidence: aiConfidence,
   );
 }
 
@@ -105,6 +113,8 @@ class Report {
     required this.createdAt,
     required this.updatedAt,
     this.citizenName,
+    this.aiCategory,
+    this.aiConfidence,
   });
 
   factory Report.submitted(
@@ -142,6 +152,8 @@ class Report {
       ],
       createdAt: now,
       updatedAt: now,
+      aiCategory: draft.aiCategory,
+      aiConfidence: draft.aiConfidence,
     );
   }
 
@@ -171,6 +183,8 @@ class Report {
     ),
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
+    aiCategory: ReportCategory.values.asNameMap()[json['aiCategory']],
+    aiConfidence: (json['aiConfidence'] as num?)?.toDouble(),
   );
 
   final String id;
@@ -188,6 +202,8 @@ class Report {
   final List<ReportEvent> history;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final ReportCategory? aiCategory;
+  final double? aiConfidence;
 
   Map<String, dynamic> toJson() => {
     'reference': reference,
@@ -207,5 +223,7 @@ class Report {
     'history': history.map((event) => event.toJson()).toList(),
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
+    if (aiCategory != null) 'aiCategory': aiCategory!.name,
+    if (aiConfidence != null) 'aiConfidence': aiConfidence,
   };
 }

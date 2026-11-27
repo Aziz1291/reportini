@@ -47,3 +47,6 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 /release/
+
+# Local AI key file (see ai.env.example.json)
+ai.env.json

@@ -160,6 +160,14 @@ class ReportDetailScreen extends StatelessWidget {
                             Icons.person_outline,
                             report.citizenName ?? 'Nom du citoyen indisponible',
                           ),
+                          if (report.aiCategory case final aiCategory?) ...[
+                            const SizedBox(height: 5),
+                            MetadataLine(
+                              Icons.auto_awesome_outlined,
+                              'Catégorie suggérée par l’IA : ${aiCategory.label}'
+                              '${report.aiConfidence == null ? '' : ' (${(report.aiConfidence! * 100).round()} %)'}',
+                            ),
+                          ],
                         ],
                         if (report.description.isNotEmpty) ...[
                           const SizedBox(height: 7),

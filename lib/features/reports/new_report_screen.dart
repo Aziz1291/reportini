@@ -9,6 +9,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/ai/ai_service.dart';
+import '../../core/ai/image_analysis.dart';
+import '../../core/ai/image_analyzer.dart';
+import '../../core/ai/suggestion.dart';
 import '../../core/app_state.dart';
 import '../../core/theme.dart';
 import '../../core/ui.dart';
@@ -44,6 +48,14 @@ class _NewReportScreenState extends State<NewReportScreen> {
   bool _sending = false;
   bool _showDetails = false;
   bool _requestedLocation = false;
+
+  // AI photo recognition.
+  ImageAnalysis? _analysis;
+  bool _analyzing = false;
+  bool _analysisDismissed = false;
+  String? _aiError;
+  int _analysisRun = 0;
+  bool _categoryChosenByUser = false;
 
   @override
   void initState() {
@@ -101,6 +113,7 @@ class _NewReportScreenState extends State<NewReportScreen> {
         _photo = file;
         _preview = bytes;
       });
+      unawaited(_analyze(bytes));
     } catch (_) {
       if (mounted) {
         showMessage(
@@ -111,6 +124,63 @@ class _NewReportScreenState extends State<NewReportScreen> {
     } finally {
       if (mounted) setState(() => _choosingPhoto = false);
     }
+  }
+
+  Future<void> _analyze(Uint8List bytes) async {
+    final analyzer = context.read<AiService>().analyzer;
+    final run = ++_analysisRun;
+    if (!analyzer.isEnabled) {
+      setState(() {
+        _analysis = null;
+        _aiError = null;
+      });
+      return;
+    }
+    setState(() {
+      _analyzing = true;
+      _analysis = null;
+      _analysisDismissed = false;
+      _aiError = null;
+    });
+    try {
+      final result = await analyzer.analyze(
+        bytes,
+        mimeType: detectMimeType(bytes),
+      );
+      // Ignore a stale result if the photo changed during the analysis.
+      if (!mounted || run != _analysisRun) return;
+      setState(() {
+        _analysis = result;
+        _applySuggestion(result, force: false);
+      });
+    } on AiException catch (error) {
+      if (mounted && run == _analysisRun) {
+        setState(() => _aiError = error.message);
+      }
+    } catch (_) {
+      if (mounted && run == _analysisRun) {
+        setState(() => _aiError = 'Analyse IA impossible pour cette photo.');
+      }
+    } finally {
+      if (mounted && run == _analysisRun) setState(() => _analyzing = false);
+    }
+  }
+
+  void _applySuggestion(ImageAnalysis analysis, {required bool force}) {
+    final merged = mergeSuggestion(
+      analysis: analysis,
+      category: _category,
+      categoryChosenByUser: _categoryChosenByUser,
+      title: _title.text,
+      description: _description.text,
+      force: force,
+    );
+    _category = merged.category;
+    if (_title.text != merged.title) _title.text = merged.title;
+    if (_description.text != merged.description) {
+      _description.text = merged.description;
+    }
+    if (force) _categoryChosenByUser = false;
   }
 
   void _next() {
@@ -230,6 +300,8 @@ class _NewReportScreenState extends State<NewReportScreen> {
           location: location,
           photo: _photo!,
           municipality: null,
+          aiCategory: _analysis?.category,
+          aiConfidence: _analysis?.confidence,
         ),
       );
       if (mounted) context.go('/confirmation/${report.id}');
@@ -349,6 +421,7 @@ class _NewReportScreenState extends State<NewReportScreen> {
         ),
       ),
       const SizedBox(height: 16),
+      ..._aiSection(context),
       CivicCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +449,10 @@ class _NewReportScreenState extends State<NewReportScreen> {
                     ),
                     label: Text(category.label),
                     selected: _category == category,
-                    onSelected: (_) => setState(() => _category = category),
+                    onSelected: (_) => setState(() {
+                      _category = category;
+                      _categoryChosenByUser = true;
+                    }),
                   ),
               ],
             ),
@@ -385,6 +461,59 @@ class _NewReportScreenState extends State<NewReportScreen> {
       ),
     ],
   );
+
+  List<Widget> _aiSection(BuildContext context) {
+    final enabled = context.watch<AiService>().isActive;
+    final analysis = _analysis;
+    if (!enabled) return const [_AiHint(), SizedBox(height: 16)];
+    if (_preview == null || (_analysisDismissed && !_analyzing)) return [];
+    final Widget card;
+    if (_analyzing) {
+      card = const CivicCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ReportSection(Icons.auto_awesome, 'Analyse IA…'),
+            SizedBox(height: 10),
+            LinearProgressIndicator(),
+            SizedBox(height: 8),
+            Text(
+              'Reconnaissance du problème sur la photo',
+              style: TextStyle(color: civicMuted),
+            ),
+          ],
+        ),
+      );
+    } else if (_aiError case final error?) {
+      card = CivicCard(
+        child: Row(
+          children: [
+            const Icon(Icons.auto_awesome_outlined, color: civicMuted),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(error, style: const TextStyle(color: civicMuted)),
+            ),
+            TextButton(
+              onPressed: () => _analyze(_preview!),
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    } else if (analysis != null) {
+      card = _AiSuggestionCard(
+        analysis: analysis,
+        onApply: () => setState(() => _applySuggestion(analysis, force: true)),
+        onDismiss: () => setState(() => _analysisDismissed = true),
+      );
+    } else {
+      return [];
+    }
+    return [
+      Semantics(liveRegion: true, child: card),
+      const SizedBox(height: 16),
+    ];
+  }
 
   Widget _detailsStep(BuildContext context) {
     final location = _location;
@@ -604,4 +733,128 @@ class _StepLabel extends StatelessWidget {
       ),
     ],
   );
+}
+
+class _AiHint extends StatelessWidget {
+  const _AiHint();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      color: civicTint,
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
+    child: Padding(
+      padding: EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_outlined, color: civicBlue, size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Astuce : activez l’Assistant IA dans votre profil pour remplir '
+              'automatiquement le signalement.',
+              style: TextStyle(color: civicBlue, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AiSuggestionCard extends StatelessWidget {
+  const _AiSuggestionCard({
+    required this.analysis,
+    required this.onApply,
+    required this.onDismiss,
+  });
+
+  final ImageAnalysis analysis;
+  final VoidCallback onApply;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    const warning = Color(0xFF92400E);
+    final reason = analysis.reason;
+    return CivicCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ReportSection(
+            Icons.auto_awesome,
+            'Suggestion IA',
+            trailing: Text(
+              '${analysis.confidencePercent} %',
+              style: const TextStyle(
+                color: civicBlue,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Chip(
+              avatar: Icon(categoryIcon(analysis.category), size: 17),
+              label: Text(analysis.category.label),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          if (analysis.title.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              analysis.title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+          if (analysis.description.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              analysis.description,
+              style: const TextStyle(color: civicMuted),
+            ),
+          ],
+          if (!analysis.isUrbanIssue) ...[
+            const SizedBox(height: 10),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Cette photo ne semble pas montrer un problème urbain.'
+                        '${reason == null ? '' : ' $reason'}',
+                        style: const TextStyle(color: warning),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(onPressed: onDismiss, child: const Text('Ignorer')),
+              const SizedBox(width: 6),
+              FilledButton.tonal(
+                onPressed: onApply,
+                child: const Text('Appliquer'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

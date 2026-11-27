@@ -11,7 +11,7 @@ Rôles outillés : planification/Scrum Master assistée par Claude, implémentat
 
 | ID | User Story | Tâches techniques | SP | État |
 |----|-----------|-------------------|----|------|
-| US1 | Configurer Flutter + Firebase | Projet Flutter (android, web), thème Civic Modernist, go_router, provider, couche Repository, `LocalBackend` + `FirebaseBackend`, données de démonstration | 3 | ✅ |
+| US1 | Configurer Flutter + Firebase | Projet Flutter (android, web), thème Civic Modernist, go_router, provider, couche Repository, `LocalBackend` (utilisé en démo) + `FirebaseBackend` (code et règles prêts, projet Firebase pas encore créé), données de démonstration | 3 | ✅ (Firebase à brancher) |
 | US2 | Créer un compte / se connecter | Écrans Connexion & Inscription, validateurs (e‑mail, 8 car. + 1 chiffre, confirmation, CGU), session persistante, redirection par rôle | 3 | ✅ |
 | US3 | Prendre/choisir une photo | `image_picker` caméra/galerie, compression (1280 px, qualité 70), « Reprendre » | 3 | ✅ |
 | US4 | Choisir une catégorie | Puces : Déchets, Voirie, Éclairage, Équipement, Autre anomalie urbaine | 2 | ✅ |
@@ -178,3 +178,44 @@ sequenceDiagram
 
 ## Sprint 3 — Durcissement et livraison
 Formatage d’adresse sans Plus Code, tri « Hors zone », données de démo versionnées, icône de l’application, accessibilité (Semantics, cibles 48 dp), ouverture des paramètres si la localisation est refusée, tests d’intégration de connexion, APK release.
+
+---
+
+## Sprint 4 — Reconnaissance automatique par IA
+
+### Sprint Backlog
+
+| ID | User Story | Tâches techniques | SP | État |
+|----|-----------|-------------------|----|------|
+| US16 | En tant que citoyen, je veux que l’application reconnaisse le problème sur ma photo afin de remplir mon signalement plus vite. | `ImageAnalyzer` (Gemini par défaut, Grok/OpenAI compatibles), prompt français, réponse JSON contrainte, carte « Suggestion IA » (catégorie, titre, description, confiance), fusion sans écraser les choix du citoyen | 5 | ✅ |
+| US17 | En tant que citoyen, je veux être averti si ma photo ne montre pas un problème urbain. | Champ `isUrbanIssue` + avertissement non bloquant | 1 | ✅ |
+| US18 | En tant qu’administrateur, je veux configurer la clé API de l’IA. | Écran « Assistant IA » (fournisseur, clé masquée, modèle, test), clé de remplacement dans `ai_keys.dart`, `--dart-define-from-file` | 2 | ✅ |
+| US19 | En tant qu’agent, je veux voir la catégorie suggérée par l’IA. | `aiCategory` / `aiConfidence` enregistrés avec le signalement | 1 | ✅ |
+| | **Total** | | **9** | **9/9** |
+
+### Conception
+
+```mermaid
+sequenceDiagram
+  actor Citoyen
+  participant UI as NewReportScreen
+  participant AI as ImageAnalyzer (Gemini)
+  Citoyen->>UI: prend / choisit une photo
+  UI->>AI: analyze(photo compressée)
+  AI-->>UI: {category, title, description, confidence, isUrbanIssue}
+  UI->>UI: mergeSuggestion (ne remplit que les champs vides)
+  UI-->>Citoyen: carte « Suggestion IA » (Appliquer / Ignorer)
+```
+
+Choix du fournisseur : **Google Gemini (Flash)** — offre gratuite sans carte, multimodal natif, sortie JSON validée par un schéma, cohérent avec l’écosystème Google (Flutter, Firebase). Grok reste possible via l’API compatible OpenAI.
+
+### Sprint Review
+- Sans clé (valeur `COLLEZ_VOTRE_CLE_API_ICI`) : l’IA est désactivée, le parcours de signalement reste identique, une astuce propose l’activation.
+- Avec une clé : la photo est analysée, la catégorie et les champs vides sont pré-remplis ; une clé invalide affiche « Clé API invalide ou non autorisée » sans bloquer l’envoi.
+- Qualité : `flutter analyze` sans problème, 42 tests verts (dont 15 pour l’IA), APK et build Web générés.
+
+### Rétrospective
+| 👍 À garder | 👎 À améliorer | 🎯 Actions |
+|-------------|---------------|-----------|
+| IA facultative : aucune dépendance bloquante | Clé API embarquée dans l’app | Passer l’appel IA par une Cloud Function en production |
+| Logique de fusion testée unitairement | Gemini renvoie une clé invalide en HTTP 400 | Erreur lue dans le corps de la réponse (corrigé) |

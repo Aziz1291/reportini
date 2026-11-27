@@ -7,6 +7,7 @@ import '../../core/ui.dart';
 import '../../core/validators.dart';
 import '../../data/models/report.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../ai/ai_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -131,6 +132,18 @@ class ProfileScreen extends StatelessWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
+              _ProfileItem(
+                Icons.auto_awesome_outlined,
+                'Assistant IA',
+                'Reconnaissance automatique des photos',
+                // Root navigator: full screen, above the tab bar and app bar.
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AiSettingsScreen(),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
               _ProfileItem(
                 Icons.domain_outlined,
                 'Services municipaux partenaires',

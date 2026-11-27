@@ -7,6 +7,7 @@ import '../../core/ui.dart';
 import '../../data/models/account.dart';
 import '../../data/models/municipality.dart';
 import '../../data/models/report.dart';
+import '../ai/ai_settings_screen.dart';
 import '../profile/profile_screen.dart';
 import 'agent_management.dart';
 import 'dashboard_widgets.dart';
@@ -19,6 +20,7 @@ enum _Section {
   unassigned('Hors zone', Icons.location_off_outlined),
   municipalities('Municipalités', Icons.apartment_outlined),
   agents('Comptes agents', Icons.groups_outlined),
+  ai('Assistant IA', Icons.auto_awesome_outlined),
   account('Compte', Icons.person_outline);
 
   const _Section(this.label, this.icon);
@@ -59,6 +61,7 @@ class _DashboardState extends State<_Dashboard> {
           _Section.unassigned,
           _Section.municipalities,
           _Section.agents,
+          _Section.ai,
         ]
       : const [_Section.reports, _Section.account];
   late final _repository = context.read<AppState>().municipalities;
@@ -246,6 +249,7 @@ class _DashboardState extends State<_Dashboard> {
         municipalities: municipalities,
       ),
       _Section.agents => AgentManagement(municipalities: municipalities),
+      _Section.ai => const AiSettingsScreen(embedded: true),
       _Section.account => PageList(
         children: [
           const DashboardHeading('Compte'),
@@ -306,7 +310,9 @@ class _Overview extends StatelessWidget {
         ReportMetrics(reports: reports),
         if (reports.isEmpty) ...[
           const SizedBox(height: 12),
-          const CivicCard(child: Text('Aucun signalement reçu pour le moment.')),
+          const CivicCard(
+            child: Text('Aucun signalement reçu pour le moment.'),
+          ),
         ],
         const SizedBox(height: 24),
         Text(

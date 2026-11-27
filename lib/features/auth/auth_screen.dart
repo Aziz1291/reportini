@@ -324,7 +324,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   context,
                                   'Mot de passe oublié ?',
                                   'Pour un compte de démonstration, utilisez le mot de passe $demoPassword.\n\n'
-                                  'Pour retrouver l’accès à un autre compte, contactez votre municipalité ou la personne qui vous a fourni vos identifiants.',
+                                      'Pour retrouver l’accès à un autre compte, contactez votre municipalité ou la personne qui vous a fourni vos identifiants.',
                                 ),
                           child: const Text('Mot de passe oublié ?'),
                         ),

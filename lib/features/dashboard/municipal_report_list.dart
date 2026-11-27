@@ -112,13 +112,14 @@ class _MunicipalReportListState extends State<MunicipalReportList> {
         if (visible.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 28),
-            child: DashboardMessage(
-              switch ((reports.isEmpty, widget.unassignedOnly)) {
-                (true, true) => 'Aucun signalement hors zone pour le moment.',
-                (true, false) => 'Aucun signalement pour le moment.',
-                _ => 'Aucun signalement ne correspond.',
-              },
-            ),
+            child: DashboardMessage(switch ((
+              reports.isEmpty,
+              widget.unassignedOnly,
+            )) {
+              (true, true) => 'Aucun signalement hors zone pour le moment.',
+              (true, false) => 'Aucun signalement pour le moment.',
+              _ => 'Aucun signalement ne correspond.',
+            }),
           );
         }
         final report = visible[index - 1];

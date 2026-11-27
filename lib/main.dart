@@ -6,14 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
+import 'core/ai/ai_service.dart';
 import 'core/app_state.dart';
 import 'core/theme.dart';
 import 'data/firebase/firebase_backend.dart';
 import 'data/local/local_backend.dart';
 import 'firebase_options.dart';
 
+late AiService _ai;
+
 Future<AppState> _initialize() async {
   await initializeDateFormatting('fr');
+  _ai = await AiService.load();
   final AppState state;
   if (DefaultFirebaseOptions.isConfigured) {
     await Firebase.initializeApp(
@@ -67,7 +71,9 @@ class _BootstrapState extends State<_Bootstrap> {
   Widget build(BuildContext context) => FutureBuilder<AppState>(
     future: _startup,
     builder: (context, snapshot) {
-      if (snapshot.data case final state?) return ReportiniApp(state: state);
+      if (snapshot.data case final state?) {
+        return ReportiniApp(state: state, ai: _ai);
+      }
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: civicTheme(useGoogleFonts: false),

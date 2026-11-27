@@ -19,6 +19,32 @@ Le tableau de bord agent affiche les signalements de sa municipalité. L’admin
 - La sélection manuelle sur la carte reste disponible si la permission GPS est bloquée. Sur Android, le formulaire permet aussi d’ouvrir les réglages de l’application. Le bouton d’envoi est désactivé pendant la transmission.
 - Les icônes Android et Web utilisent le logo de Reportini.
 
+## Reconnaissance automatique par IA (Sprint 4)
+
+Après la prise de photo, l’**Assistant IA** analyse l’image et propose la catégorie, un titre et une description (avec un pourcentage de confiance). Il ne remplace jamais une catégorie choisie ou un texte saisi par le citoyen ; le bouton **Appliquer** force la suggestion, **Ignorer** la masque. Si la photo ne montre pas un problème urbain (selfie, capture d’écran…), un avertissement s’affiche. La catégorie suggérée et sa confiance sont enregistrées avec le signalement et visibles par l’agent.
+
+Sans clé API, l’IA est désactivée et l’application fonctionne exactement comme avant (une astuce invite à l’activer).
+
+**Fournisseur recommandé : Google Gemini** (offre gratuite sans carte bancaire, compréhension native des images, réponse JSON contrainte par un schéma). xAI Grok et OpenAI sont aussi pris en charge (API compatible OpenAI).
+
+### Mettre la clé API
+
+Créez une clé gratuite sur <https://aistudio.google.com/apikey>, puis au choix :
+
+1. **Dans l’application** (le plus simple) : **Profil › Assistant IA** (ou menu **Assistant IA** du tableau de bord admin), collez la clé, **Tester la clé**, puis **Enregistrer**. La clé n’est jamais affichée en clair (••••1234).
+2. **Dans le code** : remplacez `COLLEZ_VOTRE_CLE_API_ICI` dans [`lib/core/ai/ai_keys.dart`](lib/core/ai/ai_keys.dart). Ne poussez jamais une vraie clé sur GitHub.
+3. **Sans toucher au code** : copiez `ai.env.example.json` en `ai.env.json` (ignoré par Git), mettez-y la clé, puis
+   ```sh
+   flutter run --dart-define-from-file=ai.env.json
+   flutter build apk --release --dart-define-from-file=ai.env.json
+   ```
+
+Une clé enregistrée dans l’application est prioritaire sur celle du code. Le modèle par défaut est `gemini-flash-latest` (modifiable dans l’écran).
+
+> **Sécurité :** une clé intégrée à une application mobile peut être extraite. C’est acceptable pour la démonstration ; en production, l’appel à l’IA doit passer par un serveur (par exemple une Cloud Function Firebase) qui garde la clé.
+
+Code : `lib/core/ai/` (analyseurs Gemini et compatible OpenAI, réglages, fusion des suggestions), `lib/features/ai/ai_settings_screen.dart`, tests dans `test/ai_test.dart`.
+
 ## Architecture
 
 - `lib/core/` contient la navigation par rôle, l’état Provider, le thème Civic Modernist et le calcul de distance.
